@@ -33,10 +33,18 @@ void signal_handle(int)
 	signal(SIGINT, SIG_DFL);
 }
 
+void flipPingPong(int &fd_fb1, struct fb_var_screeninfo &vinfo, bool &pingPong)
+{
+	ioctl(fd_fb1, FBIO_WAITFORVSYNC, NULL);
+	vinfo.yoffset = pingPong * vinfo.yres;
+	ioctl(fd_fb1, FBIOPAN_DISPLAY, &vinfo);
+	pingPong != pingPong;
+}
+
 int main(int argc, char **argv)
 {
-	int w, h;
 	int fd_fb1;
+	bool pingPong;
 	size_t overlay_sz;
 	int *overlay_buf;
 	struct mxcfb_gbl_alpha alpha;
@@ -71,14 +79,17 @@ int main(int argc, char **argv)
 	// enable FB1
 	ioctl(fd_fb1, FBIOBLANK, FB_BLANK_UNBLANK);
 
+	pingPong = fb1_var.yoffset;
 	list<string> image_list;
 	getimagefromdir(argv[1], image_list);
 	list<string>::iterator iter = image_list.begin();
 	while (animation_running) {
-		if (EXIT_SUCCESS != load_tga(overlay_buf, (*iter).c_str(), &w, &h, fb1_var)) {
+		if (EXIT_SUCCESS != load_tga(overlay_buf+pingPong*overlay_sz/2, (*iter).c_str(), fb1_var)) {
 			fprintf(stderr, "Failed to load tga images!\n");
 			break;
 		}
+
+		flipPingPong(fd_fb1, fb1_var, pingPong);
 
 		++iter;
 		if (iter == image_list.end()) iter = image_list.begin();
