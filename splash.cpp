@@ -13,6 +13,7 @@
 
 #include "splash.h"
 #include "tgaimage.h"
+#include "bmpimage.h"
 
 using namespace std;
 
@@ -84,8 +85,13 @@ int main(int argc, char **argv)
 	getimagefromdir(argv[1], image_list);
 	list<string>::iterator iter = image_list.begin();
 	while (animation_running) {
+#if 0
 		if (EXIT_SUCCESS != load_tga(overlay_buf+pingPong*overlay_sz/2, (*iter).c_str(), fb1_var)) {
 			fprintf(stderr, "Failed to load tga images!\n");
+#else
+		if (EXIT_SUCCESS != load_bmp(overlay_buf+pingPong*overlay_sz/2, (*iter).c_str(), fb1_var)) {
+			fprintf(stderr, "Failed to load bmp images!\n");
+#endif
 			break;
 		}
 
