@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include <unistd.h>  // arm-linux-gnueabihf-gcc -std=gnu11 splash.c -o splash
+#include <unistd.h>
 #include <memory.h>
 #include <string.h>
 #include <unistd.h>
@@ -11,7 +11,6 @@
 #include <sys/time.h>
 #include <sys/ioctl.h>
 
-#include "splash.h"
 #include "tgaimage.h"
 #include "bmpimage.h"
 
@@ -66,8 +65,15 @@ int main(int argc, char **argv)
 	fprintf(stdout, "RES: %d, %d\n", fb1_var.xres, fb1_var.yres);
 
 	overlay_sz = fb1_var.xres * fb1_var.yres * 4;
+	if (imageFileBuffer.image_file_buffer == 0) {
+		if ((imageFileBuffer.image_file_buffer = (char*)malloc(overlay_sz)) == 0) {
+			fprintf(stderr, "Cannot malloc image file buffer!\n");
+			close(fd_fb1);
+		}
+		imageFileBuffer.image_file_buffer_len = overlay_sz;
+	}
 	overlay_buf = (int *)mmap(0, overlay_sz, PROT_READ | PROT_WRITE,MAP_SHARED, fd_fb1, 0);
-	fprintf(stdout, "SharedMem Ptr: 0x%p\n", overlay_buf);
+	fprintf(stdout, "SharedMem Ptr: %p\n", overlay_buf);
 
 	// first clear fb1
 	memset(overlay_buf, 0x00, overlay_sz);
@@ -83,17 +89,25 @@ int main(int argc, char **argv)
 	pingPong = fb1_var.yoffset;
 	list<string> image_list;
 	getimagefromdir(argv[1], image_list);
-	list<string>::iterator iter = image_list.begin();
+
+	string suffix;
+	auto iter = image_list.begin();
 	while (animation_running) {
-#if 0
-		if (EXIT_SUCCESS != load_tga(overlay_buf+pingPong*overlay_sz/2, (*iter).c_str(), fb1_var)) {
-			fprintf(stderr, "Failed to load tga images!\n");
-#else
-		if (EXIT_SUCCESS != load_bmp(overlay_buf+pingPong*overlay_sz/2, (*iter).c_str(), fb1_var)) {
-			fprintf(stderr, "Failed to load bmp images!\n");
-#endif
-			break;
+
+		suffix = (*iter).substr((*iter).size()-4, 4);
+		if (suffix == ".tga") {
+			if (EXIT_SUCCESS != load_tga(overlay_buf+pingPong*overlay_sz/2, (*iter).c_str(), &fb1_var)) {
+				fprintf(stderr, "Failed to load tga images!\n");
+				break ;
+			}
 		}
+		else if (suffix == ".bmp") {
+			if (EXIT_SUCCESS != load_bmp(overlay_buf+pingPong*overlay_sz/2, (*iter).c_str(), &fb1_var)) {
+				fprintf(stderr, "Failed to load bmp images!\n");
+				break;
+			}
+		}
+		else continue;
 
 		flipPingPong(fd_fb1, fb1_var, pingPong);
 
@@ -103,7 +117,12 @@ int main(int argc, char **argv)
 		usleep(66000);
 	}
 
+	if (imageFileBuffer.image_file_buffer != 0) free(imageFileBuffer.image_file_buffer);
+
+	// disable FB1
+//	ioctl(fd_fb1, FBIOBLANK, FB_BLANK_POWERDOWN);
 	munmap(overlay_buf, overlay_sz);
+
 	close(fd_fb1);
 	return EXIT_SUCCESS;
 }

@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 
 #include <list>
@@ -14,6 +15,19 @@
 #include <iostream>
 
 using namespace std;
+
+#define PRINT_TIME(val) \
+struct timeval val##tv; \
+gettimeofday(&val##tv, 0); \
+fprintf(stderr, "Current Time %s: %ld:%ld\n", #val, val##tv.tv_sec, val##tv.tv_usec);
+
+
+typedef struct
+{
+	char *image_file_buffer = 0;
+	unsigned int image_file_buffer_len = 0;
+}__attribute__((packed)) ImageFileBuffer;
+ImageFileBuffer imageFileBuffer;
 
 bool getimagefromdir(const char *dir, list<string> &image_list)
 {

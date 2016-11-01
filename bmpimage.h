@@ -2,20 +2,57 @@
 #define BMPIMAGE_H_
 
 #include <stdio.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <memory.h>
-#include <stdlib.h>
-#include <memory.h>
+#include <stdint.h>
 #include <string.h>
-#include <linux/fb.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/ioctl.h>
 
-int load_bmp(int *buffer, const char *fileName, struct fb_var_screeninfo &fb1_var)
+#include "splash.h"
+
+typedef struct
+{
+	uint16_t fileType;
+	uint32_t fileSize;
+	uint16_t reserved1;
+	uint16_t reserved2;
+	uint32_t imageOffset;
+}__attribute__((packed)) BmpHead;
+
+typedef struct
+{
+	uint32_t infoSize;
+	uint32_t width;
+	uint32_t height;
+	uint16_t planes;
+	uint16_t bitsPerPixel;
+	uint32_t compressionType;
+	uint32_t size;
+	uint32_t xPixelsPerMeter;
+	uint32_t yPixelsPerMeter;
+	uint32_t colorUsed;
+	uint32_t colorImportant;
+}__attribute__((packed)) BmpInfo;
+
+typedef struct
+{
+	uint8_t   bytesPerPixel;
+	uint32_t  imageSize;
+	uint8_t   imageDataStart;
+	uint32_t  imageDataBytes;
+}__attribute__((packed)) BmpExtInfo;
+
+
+BmpHead bmpHead;
+BmpInfo bmpInfo;
+BmpExtInfo bmpExtInfo;
+
+typedef struct
+{
+	uint8_t blue;
+	uint8_t green;
+	uint8_t red;
+	uint8_t reserved;
+}__attribute__((packed)) RGBQuad;
+
+int load_bmp(int *buffer, const char *fileName, struct fb_var_screeninfo *fb1_var)
 {
 	int ret;
 	int bmp_fd;
@@ -29,40 +66,47 @@ int load_bmp(int *buffer, const char *fileName, struct fb_var_screeninfo &fb1_va
 		return EXIT_FAILURE;
 	}
 
-	lseek(bmp_fd,18,SEEK_SET);
-	if((ret = read(bmp_fd,&width,4))!= 4) {
-		fprintf(stderr, "Read BMP Width Failed!\n");
+	if((ret = read(bmp_fd, &bmpHead, sizeof(BmpHead))) != sizeof(BmpHead)) {
+		fprintf(stderr, "Read BMP Head Failed!\n");
 		return EXIT_FAILURE;
 	}
 
-	lseek(bmp_fd,22,SEEK_SET);
-	if((ret = read(bmp_fd,&height,4)) != 4) {
-		fprintf(stderr, "Read BMP Height Failed!\n");
+	if((ret = read(bmp_fd, &bmpInfo, sizeof(BmpInfo))) != sizeof(BmpInfo)) {
+		fprintf(stderr, "Read BMP Info Failed!\n");
 		return EXIT_FAILURE;
 	}
 
-	if ((bmp24_buf = (char*)malloc(width*height*3)) == 0) {
+	if ((bmp24_buf = (char*)malloc(bmpInfo.width*bmpInfo.height*3)) == 0) {
 		fprintf(stderr, "Malloc Failed!\n");
 		return EXIT_FAILURE;
 	}
 
-	lseek(bmp_fd,54,SEEK_SET);
-	if((ret = read(bmp_fd,bmp24_buf,width*height*3)) != width*height*3) {
+	bmpExtInfo.bytesPerPixel = bmpInfo.bitsPerPixel/8;
+	bmpExtInfo.imageSize = bmpInfo.width*bmpInfo.height;
+	bmpExtInfo.imageDataStart = sizeof(BmpHead)+sizeof(BmpInfo);
+	bmpExtInfo.imageDataBytes = bmpExtInfo.imageSize*bmpExtInfo.bytesPerPixel;
+
+//	fprintf(stdout, "ImageOffset: %d\n", bmpHead.imageOffset);
+//	fprintf(stdout, "CompressionType: %d\n", bmpInfo.compressionType);
+//	fprintf(stdout, "BytesPerPixel: %d\n", bmpExtInfo.bytesPerPixel);
+
+	lseek(bmp_fd, bmpExtInfo.imageDataStart, SEEK_SET);
+	if((ret = read(bmp_fd, bmp24_buf, bmpExtInfo.imageDataBytes)) != bmpExtInfo.imageDataBytes) {
 		fprintf(stderr, "Read 24bit BMP Failed!\n");
 		return EXIT_FAILURE;
 	}
 
-	int half_height = (fb1_var.yres-height)/2;
-	int half_width = (fb1_var.xres-width)/2;
+	int half_height = (fb1_var->yres-bmpInfo.height)/2;
+	int half_width = (fb1_var->xres-bmpInfo.width)/2;
 
-	for(y = height+half_height-1; y >= half_height; --y)
-		for(x = half_width*4; x < (half_width+width)*4; x+=4)
+	for(y = bmpInfo.height+half_height-1; y >= half_height; --y)
+		for(x = half_width*4; x < (half_width+bmpInfo.width)*4; x+=4)
 		{
-			*(buffer_tmp+y*1440*4+x) = bmp24_buf[i];
-			*(buffer_tmp+y*1440*4+x+1) = bmp24_buf[i+1];
-			*(buffer_tmp+y*1440*4+x+2) = bmp24_buf[i+2];
-			*(buffer_tmp+y*1440*4+x+3) = 255;
-			i+=3;
+			*(buffer_tmp+y*fb1_var->xres*4+x) = bmp24_buf[i];
+			*(buffer_tmp+y*fb1_var->xres*4+x+1) = bmp24_buf[i+1];
+			*(buffer_tmp+y*fb1_var->xres*4+x+2) = bmp24_buf[i+2];
+			*(buffer_tmp+y*fb1_var->xres*4+x+3) = 255;
+			i += bmpExtInfo.bytesPerPixel;
 		}
 
 	free(bmp24_buf);

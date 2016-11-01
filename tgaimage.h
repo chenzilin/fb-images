@@ -2,57 +2,143 @@
 #define TGAIMAGE_H_
 
 #include <stdio.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <stdint.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
 
-using namespace std;
+#include "splash.h"
 
-int load_tga(int *buffer, const char *fileName, struct fb_var_screeninfo &fb1_var)
+typedef struct
+{
+	uint8_t   descLen;
+	uint8_t   cmapType;
+	uint8_t   imageType;
+	uint16_t  cmapStart;
+	uint16_t  cmapLen;
+	uint8_t   cmapBits;
+	uint16_t  xOffset;
+	uint16_t  yOffset;
+}__attribute__((packed)) TgaHead;
+
+typedef struct
+{
+	uint16_t  width;
+	uint16_t  height;
+	uint8_t   bitsPerPixel;
+	uint8_t   attrib;
+}__attribute__((packed)) TgaInfo;
+
+typedef struct
+{
+	uint8_t   bytesPerPixel;
+	uint32_t  imageSize;
+	uint8_t   imageDataStart;
+	uint32_t  imageDataBytes;
+}__attribute__((packed)) TgaExtInfo;
+
+TgaHead tgaHead;
+TgaInfo tgaInfo;
+TgaExtInfo tgaExtInfo;
+
+bool decode_tga(FILE *fp)
+{
+	char head;
+	char data[5];
+	int currPixel = 0;
+	int buffer_index = 0;
+
+	fseek(fp, tgaExtInfo.imageDataStart, SEEK_SET);
+	do{
+		if(fread(&head, sizeof(head), 1, fp) == 0) {
+			fprintf(stdout, "Read encode head failed!\n");
+			return EXIT_FAILURE;
+		}
+
+		if (head & 0x80) {
+			int icnt = (head & 0x7f) + 1;
+			fread(&data, tgaExtInfo.bytesPerPixel, 1, fp);
+			for (int i = 0; i < icnt; ++i) {
+				imageFileBuffer.image_file_buffer[buffer_index+0] = data[0];
+				imageFileBuffer.image_file_buffer[buffer_index+1] = data[1];
+				imageFileBuffer.image_file_buffer[buffer_index+2] = data[2];
+				if (tgaExtInfo.bytesPerPixel == 4)
+					imageFileBuffer.image_file_buffer[buffer_index+3] = data[3];
+				++currPixel;
+				buffer_index += 4;
+			}
+		}
+		else {
+			int icnt = head + 1;
+			for (int i = 0; i < icnt; ++i) {
+			fread(&data, tgaExtInfo.bytesPerPixel, 1, fp);
+				imageFileBuffer.image_file_buffer[buffer_index+0] = data[0];
+				imageFileBuffer.image_file_buffer[buffer_index+1] = data[1];
+				imageFileBuffer.image_file_buffer[buffer_index+2] = data[2];
+				if (tgaExtInfo.bytesPerPixel == 4)
+					imageFileBuffer.image_file_buffer[buffer_index+3] = data[3];
+				++currPixel;
+				buffer_index += 4;
+			}
+		}
+	} while(!feof(fp) && currPixel < tgaExtInfo.imageSize);
+
+	return EXIT_SUCCESS;
+}
+
+int load_tga(int *buffer, const char *fileName, struct fb_var_screeninfo *fb1_var)
 {
 	FILE *fp;
 	char* ptr;
-	int width;
-	int height;
-	unsigned int imagesize;
-	unsigned char tgaheader[12];
-	unsigned char attributes[6];
 	int yoffset;
 
-	if (buffer == NULL) return EXIT_FAILURE;
+	if ((fp = fopen(fileName, "rb")) == NULL) {
+		fprintf(stderr, "Open tga image failed!\n");
+		return EXIT_FAILURE;
+	}
 
-	if ((fp = fopen(fileName, "rb")) == NULL) return EXIT_FAILURE;
-
-	if(fread(&tgaheader, sizeof(tgaheader), 1, fp) == 0) {
+	if(fread(&tgaHead, sizeof(TgaHead), 1, fp) == 0) {
 		fclose(fp);
 		return EXIT_FAILURE;
 	}
 
-	if(fread(attributes, sizeof(attributes), 1, fp) == 0) {
+	if(fread(&tgaInfo, sizeof(TgaInfo), 1, fp) == 0) {
 		fclose(fp);
 		return EXIT_FAILURE;
 	}
 
-	width = attributes[1] * 256 + attributes[0];
-	height = attributes[3] * 256 + attributes[2];
-	imagesize = attributes[4] / 8 * width * height;
-//	fprintf(stdout, "TGA bits: %d\n", attributes[5] & 030);
-//	fprintf(stdout, "TGA Pixel depth: %d\n", attributes[4]);
-//	fprintf(stdout, "Image buffer ptr: 0x%p\n", buffer);
+	tgaExtInfo.bytesPerPixel = tgaInfo.bitsPerPixel/8;
+	tgaExtInfo.imageSize = tgaInfo.width*tgaInfo.height;
+	tgaExtInfo.imageDataStart = sizeof(TgaHead)+sizeof(TgaInfo)+tgaHead.descLen;
+	tgaExtInfo.imageDataBytes = tgaExtInfo.imageSize*tgaExtInfo.bytesPerPixel;
 
-	yoffset = (fb1_var.yres-height)/2;
-	ptr = (char*)buffer + (fb1_var.xres-width)/2*4 + yoffset*fb1_var.xres*4;
-	ptr += height * fb1_var.xres*4;
+//	fprintf(stdout, "TGA width: %d\n", tgaInfo.width);
+//	fprintf(stdout, "TGA height: %d\n", tgaInfo.height);
+//	fprintf(stdout, "IGA bytesPerPixel: %d\n", tgaExtInfo.bytesPerPixel);
+//	fprintf(stdout, "TGA imageSize: %d\n", tgaExtInfo.imageSize);
+//	fprintf(stdout, "TGA imageDataStart: %d\n", tgaExtInfo.imageDataStart);
+//	fprintf(stdout, "TGA imageDataBytes: %d\n", tgaExtInfo.imageDataBytes);
+//	fprintf(stdout, "Image buffer ptr: %p\n", buffer);
 
-	int n = 0;
-	while (n < imagesize)
-	{
-		fread(ptr, width * 4, 1, fp);
-		n += width * 4;
-		ptr -= fb1_var.xres * 4;
+//PRINT_TIME(AA);
+	if (tgaHead.imageType == 10) { // compressed tga image
+		decode_tga(fp);
+	}
+//PRINT_TIME(BB);
+
+	yoffset = (fb1_var->yres-tgaInfo.height)/2;
+	ptr = (char*)buffer + (fb1_var->xres-tgaInfo.width)/2*4 + yoffset*fb1_var->xres*4;
+	ptr += tgaInfo.height * fb1_var->xres*4;
+
+	int i = 0;
+	while (i < tgaExtInfo.imageDataBytes) {
+		if (tgaHead.imageType == 10) { // compressed tga image
+			memcpy(ptr, imageFileBuffer.image_file_buffer+i, tgaInfo.width*4);
+		}
+		else {
+			fread(ptr, tgaInfo.width * 4, 1, fp);
+		}
+
+		i += tgaInfo.width * 4;
+		ptr -= fb1_var->xres * 4;
 	}
 	fclose(fp);
 	return EXIT_SUCCESS;

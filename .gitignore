@@ -1,6 +1,5 @@
 *~
 a.out
 *.swap
-splash/
-cctruck/
+splash
 Makefile
