@@ -1,5 +1,8 @@
-#ifndef SPLASH_H_
-#define SPLASH_H_
+#pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdio.h>
 #include <dirent.h>
@@ -9,6 +12,10 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+
+#ifdef __cplusplus
+}
+#endif
 
 #include <list>
 #include <string>
@@ -46,7 +53,6 @@ bool getimagefromdir(const char *dir, list<string> &image_list)
 
 	chdir(dir);
 	while ((entry = readdir(dp)) != NULL ) {
-
 		lstat( entry->d_name, &statbuf );
 		if (S_ISREG(statbuf.st_mode) && (entry->d_name)[0] != '.') {
 			strcpy(image_path, dir);
@@ -61,4 +67,3 @@ bool getimagefromdir(const char *dir, list<string> &image_list)
 
 	return true;
 }
-#endif

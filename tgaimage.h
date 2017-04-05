@@ -1,5 +1,4 @@
-#ifndef TGAIMAGE_H_
-#define TGAIMAGE_H_
+#pragma once
 
 #include <stdio.h>
 #include <stdint.h>
@@ -143,5 +142,3 @@ int load_tga(int *buffer, const char *fileName, struct fb_var_screeninfo *fb1_va
 	fclose(fp);
 	return EXIT_SUCCESS;
 }
-
-#endif

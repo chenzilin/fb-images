@@ -1,5 +1,4 @@
-#ifndef BMPIMAGE_H_
-#define BMPIMAGE_H_
+#pragma once
 
 #include <stdio.h>
 #include <stdint.h>
@@ -112,5 +111,3 @@ int load_bmp(int *buffer, const char *fileName, struct fb_var_screeninfo *fb1_va
 	free(bmp24_buf);
 	return EXIT_SUCCESS;
 }
-
-#endif

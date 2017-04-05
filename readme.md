@@ -5,7 +5,7 @@
 
 		compile: arm-linux-gnueabihf-g++ -std=c++11 splash.cpp -o splash
 
-		running example: ./splash /home/root/images
+		running example: ./splash /dev/fb1 /home/root/images/
 
 
 	支持的图片格式：
