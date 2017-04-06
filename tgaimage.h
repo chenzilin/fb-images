@@ -83,7 +83,7 @@ bool decode_tga(FILE *fp)
 	return EXIT_SUCCESS;
 }
 
-int load_tga(int *buffer, const char *fileName, struct fb_var_screeninfo *fb1_var)
+int load_tga(char *buffer, const char *fileName, struct fb_var_screeninfo *fb1_var)
 {
 	FILE *fp;
 	char* ptr;

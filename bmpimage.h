@@ -51,7 +51,7 @@ typedef struct
 	uint8_t reserved;
 }__attribute__((packed)) RGBQuad;
 
-int load_bmp(int *buffer, const char *fileName, struct fb_var_screeninfo *fb1_var)
+int load_bmp(char *buffer, const char *fileName, struct fb_var_screeninfo *fb1_var)
 {
 	int ret;
 	int bmp_fd;

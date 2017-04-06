@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 	int fd_fb;
 	bool pingPong;
 	size_t overlay_sz;
-	int *overlay_buf;
+	char *overlay_buf;
 	struct mxcfb_gbl_alpha alpha;
 
 	if (argc != 3) {
@@ -80,13 +80,13 @@ int main(int argc, char **argv)
 		}
 		imageFileBuffer.image_file_buffer_len = overlay_sz;
 	}
-	overlay_buf = (int *)mmap(0, overlay_sz, PROT_READ | PROT_WRITE,MAP_SHARED, fd_fb, 0);
+	overlay_buf = (char *)mmap(0, overlay_sz, PROT_READ | PROT_WRITE,MAP_SHARED, fd_fb, 0);
 	fprintf(stdout, "SharedMem Ptr: %p\n", overlay_buf);
 
-	// first clear fb
+	// first clear FB
 	memset(overlay_buf, 0x00, overlay_sz);
 
-	// Disable global alpha since we need Pixel Alpha
+	// disable global alpha since we need Pixel Alpha
 	alpha.enable = 0;
 	alpha.alpha = 0xff;
 	ioctl(fd_fb, MXCFB_SET_GBL_ALPHA, &alpha);
