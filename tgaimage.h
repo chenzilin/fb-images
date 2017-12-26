@@ -62,7 +62,7 @@ bool decode_tga(FILE *fp)
 				if (tgaExtInfo.bytesPerPixel == 4)
 					imageFileBuffer.image_file_buffer[buffer_index+3] = data[3];
 				++currPixel;
-				buffer_index += 4;
+				buffer_index += tgaExtInfo.bytesPerPixel;
 			}
 		}
 		else {
@@ -75,7 +75,7 @@ bool decode_tga(FILE *fp)
 				if (tgaExtInfo.bytesPerPixel == 4)
 					imageFileBuffer.image_file_buffer[buffer_index+3] = data[3];
 				++currPixel;
-				buffer_index += 4;
+				buffer_index += tgaExtInfo.bytesPerPixel;
 			}
 		}
 	} while(!feof(fp) && currPixel < tgaExtInfo.imageSize);
@@ -124,20 +124,20 @@ int load_tga(char *buffer, const char *fileName, struct fb_var_screeninfo *fb1_v
 //PRINT_TIME(BB);
 
 	yoffset = (fb1_var->yres-tgaInfo.height)/2;
-	ptr = (char*)buffer + (fb1_var->xres-tgaInfo.width)/2*4 + yoffset*fb1_var->xres*4;
-	ptr += tgaInfo.height * fb1_var->xres*4;
+	ptr = (char*)buffer + (fb1_var->xres-tgaInfo.width)/2*tgaExtInfo.bytesPerPixel + yoffset*fb1_var->xres*tgaExtInfo.bytesPerPixel;
+	ptr += tgaInfo.height * fb1_var->xres*tgaExtInfo.bytesPerPixel;
 
 	int i = 0;
 	while (i < tgaExtInfo.imageDataBytes) {
 		if (tgaHead.imageType == 10) { // compressed tga image
-			memcpy(ptr, imageFileBuffer.image_file_buffer+i, tgaInfo.width*4);
+			memcpy(ptr, imageFileBuffer.image_file_buffer+i, tgaInfo.width*tgaExtInfo.bytesPerPixel);
 		}
 		else {
-			fread(ptr, tgaInfo.width * 4, 1, fp);
+			fread(ptr, tgaInfo.width * tgaExtInfo.bytesPerPixel, 1, fp);
 		}
 
-		i += tgaInfo.width * 4;
-		ptr -= fb1_var->xres * 4;
+		i += tgaInfo.width * tgaExtInfo.bytesPerPixel;
+		ptr -= fb1_var->xres * tgaExtInfo.bytesPerPixel;
 	}
 	fclose(fp);
 	return EXIT_SUCCESS;
