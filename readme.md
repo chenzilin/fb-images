@@ -10,6 +10,9 @@
 
 	支持的图片格式：
 
-		Tga: 32位 压缩,非压缩
+		Tga: 24、32位 压缩,非压缩
 
 		Bmp: 24位 非压缩
+
+	注：FrameBuffer位深度应与Tga图片位数相对应
+		即FrameBuffer 24位　显示　24位Tga图片

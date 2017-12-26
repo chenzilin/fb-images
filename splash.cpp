@@ -72,7 +72,7 @@ int main(int argc, char **argv)
 	ioctl(fd_fb, FBIOGET_VSCREENINFO, &fb_var);
 	fprintf(stdout, "RES: %d, %d\n", fb_var.xres, fb_var.yres);
 
-	overlay_sz = fb_var.xres * fb_var.yres * 4;
+	overlay_sz = fb_var.xres * fb_var.yres * (fb_var.bits_per_pixel / 8);
 	if (imageFileBuffer.image_file_buffer == 0) {
 		if ((imageFileBuffer.image_file_buffer = (char*)malloc(overlay_sz)) == 0) {
 			fprintf(stderr, "Cannot malloc image file buffer!\n");
