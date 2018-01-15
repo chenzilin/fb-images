@@ -1,5 +1,9 @@
 *~
 a.out
 *.swap
-splash
 Makefile
+Makefile
+fb-images
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake

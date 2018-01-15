@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "splash.h"
+#include "fb-images.h"
 
 typedef struct
 {

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "splash.h"
+#include "fb-images.h"
 
 typedef struct
 {
@@ -126,6 +126,7 @@ int load_tga(char *buffer, const char *fileName, struct fb_var_screeninfo *fb1_v
 	yoffset = (fb1_var->yres-tgaInfo.height)/2;
 	ptr = (char*)buffer + (fb1_var->xres-tgaInfo.width)/2*tgaExtInfo.bytesPerPixel + yoffset*fb1_var->xres*tgaExtInfo.bytesPerPixel;
 	ptr += tgaInfo.height * fb1_var->xres*tgaExtInfo.bytesPerPixel;
+	ptr -= fb1_var->xres*tgaExtInfo.bytesPerPixel;
 
 	int i = 0;
 	while (i < tgaExtInfo.imageDataBytes) {

@@ -3,7 +3,10 @@
 
 	使用方法:
 
-		compile: arm-linux-gnueabihf-g++ -std=c++11 splash.cpp -o splash
+		compile:
+			cmake . && make
+		    or
+			arm-linux-gnueabihf-g++ -std=c++11 fb-images.cpp -o splash
 
 		running example: ./splash /dev/fb1 /home/root/images/
 

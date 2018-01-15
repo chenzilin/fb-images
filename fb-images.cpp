@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 	ioctl(fd_fb, MXCFB_SET_GBL_ALPHA, &alpha);
 
 	// enable FB
-	ioctl(fd_fb, FBIOBLANK, FB_BLANK_UNBLANK);
+	ioctl(fd_fb, FBIOBLANK, VESA_NO_BLANKING);
 
 	pingPong = fb_var.yoffset;
 	list<string> image_list;
